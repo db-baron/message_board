@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Edit Owl Page</title>
+    <link rel="stylesheet" type="text/css" href="../static/main.css">
+  </head>
+  <body>
+    <h3>Fine, change <% owl_data.name  %>'s information if it means so damn much to you.</h3>
+    <ul>
+      <li>Name: <strong><%= owl_data.name %></strong></li>
+      <li>Age: <strong><%= owl_data.age %></strong></li>
+      <li>Type: <strong><%= owl_data.type %></strong></li>
+    </ul>
+    <form action="/edit" method="post">
+        <div>
+            <label for="name">Owl Name:</label>
+            <input type="text" name="name" id="">
+        </div>
+        <div>
+            <label for="age">Age:</label>
+            <input type="text" name="age" id="">
+        </div>
+        <div>
+            <label for="type">Type:</label>
+            <input type="text" name="type" id="">
+        </div>
+        <input type="submit" value="Edit Owl">
+    </form>
+  </body>
+</html>
