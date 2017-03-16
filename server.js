@@ -1,145 +1,85 @@
-// Make an app with the following routes/capabilities
-// GET '/' Displays all of the mongooses.
-// GET '/mongooses/:id' Displays information about one mongoose.
-// GET '/mongooses/new' Displays a form for making a new mongoose.
-// POST '/mongooses' Should be the action attribute for the form in the above route (GET '/mongooses/new').
-// GET '/mongooses/edit/:id' Should show a form to edit an existing mongoose.
-// POST '/mongooses/:id' Should be the action attribute for the form in the above route (GET '/mongooses/edit/:id').
-// POST '/mongooses/destroy/:id' Should delete the mongoose from the database by ID.
-
 var express = require("express");
 var path = require("path");
 var bodyParser = require("body-parser");
 var mongoose = require("mongoose");
 
 var app = express();
+var Schema = mongoose.Schema;
 
-// Use native promises
-mongoose.Promise = global.Promise;
+mongoose.connect('mongodb://localhost/message_board_db1');
 
-// Use bodyParser to parse form data sent via HTTP Post
-app.use(bodyParser.urlencoded({ extended: true }));
-console.log( __dirname);
-// Tell the server to use a static file folder to handle requests for static content.
-app.use(express.static(path.join(__dirname, "./static")));
-// Set the location where express will look for the ejs views
-app.set('views', path.join(__dirname, './views'));
-// Tell express that the templating engine is EJS
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, './views'));
 
-// Connect Mongoose to MongoDB.
-mongoose.connect('mongodb://localhost/owls_db');
+app.use(express.static(path.join(__dirname, './static')));
+app.use(bodyParser.urlencoded({extended: false}));
 
-// Make a schema, OwlSchema which we'll use to model Owls.
-var OwlSchema = new mongoose.Schema({   // Note that OwlSchema is a JSON object.
-    // Validate the new owl data
-    name:  { type: String, required: true, minlength: 2},
-    age: { type: Number, min: 1, max: 500 },
-    type: { type: String, required: true, minlength: 2 }
+// One post can have many comments
+var PostSchema = new Schema({
+    name: String,
+    post: String,
+    comments: [{type: Schema.Types.ObjectId, ref: 'Comment'}] // References the data in the Comment model
 });
 
-// Store the schema as a model with the name 'Owl'. Also resets the OwlSchema
-mongoose.model("Owl", OwlSchema);
-
-// Retrieve the schema "Owl" from our Models and assigns it to the variable Owl
-// Note: Mongoose automatically looks for the lower case, plural version of your model name, so an Owl Mongoose model looks for 'owls' in Mongo.
-var Owl = mongoose.model("Owl");
-
-//// Let's hardcode adding a new owl to the database for testing purposes
-// var new_owl = new Owl();
-// new_owl.name = "Owl Franken";
-// new_owl.age = 12;
-// new_owl.type = "Hoot";
-// new_owl.save(function(err, results){
-//     console.log(results);  // prints to console
-// })
-
-// Note: anything that gets sent through the url is accessed by req.params, not req.body
-// For Updating documents, the route is:  /owls/<% person_.id %>
-
-
-
-//// ROUTES SECTION ////
-app.get('/', function(req, res) {
-    console.log("Figs"*50, req.body);
-    Owl.find({}, function(err, results) {
-        // Retrieve an array of owls. This code will run when the DB is done trying to find/retrieve records that match {}
-        res.render("index", {owl_data : results});
-    });
+var CommentSchema = new Schema({
+    name: String,
+    comment: String,
+    post: {type: Schema.Types.ObjectId, ref: "Post"}  // References the data in the Post model
 });
 
-app.get('/new', function(req, res){
-    res.render('new');
+mongoose.model('Post', PostSchema); // Create a model 'Post' and pass it a Schema
+var Post = mongoose.model('Post');  // Call the Post model we just created and save it in the var Post
+
+var Comment = mongoose.model("Comment", CommentSchema)// Like above but condensed into one line of code.
+
+
+// Routes
+app.get('/', function(req, res){
+    // Populate comments (an attribute defined comment in PostSchema). It's a little weird because comments itself has info about what model it's coming from
+    Post.find({}).populate('comments').exec(function(err, posts){
+        console.log(posts);
+        res.render('index', {posts : posts});
+    })
+    // Post.find({}, function(err, posts){    // Go to the database
+    //     if(err){
+    //         console.log(err);
+    //         console.log("Something broke in app.get(/)")
+    //     }
+    //     res.render('index.ejs', {posts: posts});
+    // })
 });
 
-// Retrieve an owl
-app.get('/:id', function(req, res) {
-    Owl.find({ _id: req.params.id }, function(err, response) {
-        if (err) {
+app.post('/comments/:id', function(req, res){
+    console.log("UMBRELLA");
+    console.log("req.body is", req.body);
+    console.log("req.params is", req.params);
+    var comment_data = {name: req.body.name, comment: req.body.comment, post: req.params.id};
+    var new_comment = new Comment(comment_data);
+    Post.findOne({_id: req.params.id}, function(err, posts){
+        console.log(posts);
+        posts.comments.push(new_comment);
+        posts.save(function(err, results){
+            new_comment.save(function(err, comment_results){
+                res.redirect('/');
+            })
+        })
+    })
+});
+
+app.post('/posts', function(req, res){
+    var new_post = new Post(req.body);  // This new Post will have a new MongoID that' you'll automatically have stored in  new_post
+    console.log("^"*25, new_post);
+    new_post.save(function(err, results){
+        if (err){
             console.log(err);
+            console.log("Something broke");
         }
-        console.log("Weeeeeeeeiiiiiaaaaaahhhhhh")
-        console.log(response[0]);
-        res.render("owl", {owl_data : response[0]});
-    });
+        else{
+            res.redirect('/');
+        }
+    })
 })
 
-// Create an owl
-app.post('/create', function(req, res){
-    // Create a new owl
-    Owl.create(req.body, function(err, result){
-        if (err) { console.log(err); }
-        res.redirect('/')
-    });
-});
-
-// Save an owl to the database via the post to /create
-// When someone presses the add button on index.ejs, a post request should be sent to the '/new' route.
-// app.post('/create', function(req, res) {  // So in the add route we should create the owl, add it to the database, then redirect to the root route (index view).
-//     console.log("#"*50)
-//     console.log("POST DATA", req.body);
-//     // Using the 'Owl' object constructor, create a new owl with the name, age, and type corresponding to those from req.body
-//     var new_owl = new Owl(req.body);
-//     // Try to save the new owl to the database and run a callback function with an error (if any) from the operation.
-//     new_owl.save(function(err) {
-//         // If there is an error then console.log that there was a problem.
-//         if(err) {
-//             console.log('Something went wrong, could not add new_owl');
-//         }
-//         else { // else console.log that we did well and then redirect to the root route
-//             console.log('Successfully added an owl!');
-//             res.redirect('/'); // Because you shouldn't render on Post
-//             }
-//     })
-// })
-
-app.get('/:id/edit', function(req,res){
-    Owl.find({ _id:req.params.id }, function(err, response) {
-        if (err) {
-            console.log(err);
-        }
-    res.render("edit", {owl_data : response[0] });
-    });
-});
-
-// app.post('/:id', function(req, res) {
-//     res.render("edit", {owls: owl_data});
-// })
-
-app.post('/:id/destroy', function(req, res) {
-    Owl.remove({ _id: req.params.id }, function(err, response){
-      if (err) {
-          console.log(err);
-      }
-      res.redirect('/');
-    });
-});
-
-
-// // We're going to have the file /routes/index.js handle all of our routing.
-// var route = require('./routes/index.js')(app); // We're creating the function 'route' and passing it app in the same line
-
-// Tell the express app to listen on port 8550
-app.listen(8550, function() {
-    console.log("listening on port 8550");
+app.listen(8600, function() {
+    console.log("listening on port 8600");
 });

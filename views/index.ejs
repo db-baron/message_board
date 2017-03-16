@@ -2,24 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>All Owls Page</title>
+    <title>Message Board</title>
     <!-- Latest compiled and minified CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <!-- Latest compiled and minified JavaScript -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>  </head>
     <link rel="stylesheet" type="text/css" href="/main.css">
   <body>
-    <h2>Look, it's a Parliament of god damn owls</h2>
+    <h2>Message Board</h2>
+    <form action="/posts" method="post">
+        Name: <input type="text" name="name"><br>
+        Post: <input type="text" name="post"><br>
+        <input type="submit" value="Submit"><br>
+    </form>
     <hr>
-    <% for (i in owl_data) { %>
-    <p>
-      Parliament member:<strong> <%= owl_data[i].name %> </strong>- <a href="/<%= owl_data[i]._id %>">Check him/her out here!</a>
-      - Or maybe <a href="/<%= owl_data._id %>/edit">"owlter" their profile.</a> Or <a href="/destroy/<%= owl_data[i]._id %>">impeach</a> them.
-    </p>
+    <% for(var post of posts) { %>
+        <h4>Name: <%= post.name %></h4>
+        <h4>Post: <%= post.post %></h4>
+
+        <form action="/comments/<%= post.id %>" method="post">
+            Name: <input type="text" name="name"><br>
+            Comment: <input type="text" name="comment"><br>
+            <input type="submit" value="Make Comment"><br>
+        </form>
+        <!-- for every comment of the comments array of my post -->
+        <% for(var comment of post.comments) { %>
+            <p>Name: <%= comment.name %></p>
+            <p>Comment: <%= comment.comment %></p>
+        <% } %>
+        <hr>
     <% } %>
-    <p>
-    <button type="button"><a href="/new">Let's elect another owl to parliament</a></button>
-    </p>
-    <img src="/funnyowl.jpg" style="width:200px;height:150px;">
   </body>
 </html>
